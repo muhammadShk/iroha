@@ -15,11 +15,6 @@
  * limitations under the License.
  */
 
-#include <responses.pb.h>
-
-#include <endpoint.pb.h>
-
-#include "builders/protobuf/common_objects/proto_account_builder.hpp"
 #include "model/sha3_hash.hpp"
 #include "module/irohad/ametsuchi/ametsuchi_mocks.hpp"
 #include "module/irohad/network/network_mocks.hpp"
@@ -55,8 +50,6 @@ using ::testing::_;
 using namespace iroha::ametsuchi;
 using namespace iroha::network;
 using namespace iroha::validation;
-using namespace iroha::model::converters;
-using namespace iroha::model;
 using namespace shared_model::proto;
 
 using namespace std::chrono_literals;
@@ -95,8 +88,8 @@ class ClientServerTest : public testing::Test {
     auto qpf = std::make_unique<iroha::model::QueryProcessingFactory>(
         wsv_query, block_query);
 
-      auto qpi = std::make_shared<iroha::torii::QueryProcessorImpl>(
-          std::move(qpf));
+    auto qpi =
+        std::make_shared<iroha::torii::QueryProcessorImpl>(std::move(qpf));
 
     //----------- Server run ----------------
     runner
@@ -148,8 +141,8 @@ TEST_F(ClientServerTest, SendTxWhenInvalidJson) {
             }
           }]
         })";
-  JsonTransactionFactory tx_factory;
-  auto json_doc = stringToJson(json_string);
+  iroha::model::converters::JsonTransactionFactory tx_factory;
+  auto json_doc = iroha::model::converters::stringToJson(json_string);
   ASSERT_TRUE(json_doc);
   auto model_tx = tx_factory.deserialize(json_doc.value());
   ASSERT_FALSE(model_tx);
@@ -190,7 +183,7 @@ TEST_F(ClientServerTest, SendQueryWhenInvalidJson) {
           }]
         })";
 
-  JsonQueryFactory queryFactory;
+  iroha::model::converters::JsonQueryFactory queryFactory;
   auto model_query = queryFactory.deserialize(json_query);
   ASSERT_FALSE(model_query);
 }
@@ -214,16 +207,12 @@ TEST_F(ClientServerTest, SendQueryWhenStatelessInvalid) {
 }
 
 TEST_F(ClientServerTest, SendQueryWhenValid) {
-  iroha_cli::CliClient client(Ip, Port);
-  auto account_admin = iroha::model::Account();
-  account_admin.account_id = "admin@test";
+  iroha_cli::CliClient client(Ip, Port);\
 
-  std::shared_ptr<shared_model::interface::Account> account_test = clone(
-      shared_model::proto::AccountBuilder().accountId("test@test").build());
-
-  EXPECT_CALL(*wsv_query,
-              hasAccountGrantablePermission(
-                  "admin@test", "test@test", can_get_my_acc_detail))
+  EXPECT_CALL(
+      *wsv_query,
+      hasAccountGrantablePermission(
+          "admin@test", "test@test", iroha::model::can_get_my_acc_detail))
       .WillOnce(Return(true));
 
   EXPECT_CALL(*wsv_query, getAccountDetail("test@test"))
@@ -246,15 +235,11 @@ TEST_F(ClientServerTest, SendQueryWhenValid) {
 
 TEST_F(ClientServerTest, SendQueryWhenStatefulInvalid) {
   iroha_cli::CliClient client(Ip, Port);
-  auto account_admin = iroha::model::Account();
-  account_admin.account_id = "admin@test";
 
-  auto account_test = iroha::model::Account();
-  account_test.account_id = "test@test";
-
-  EXPECT_CALL(*wsv_query,
-              hasAccountGrantablePermission(
-                  "admin@test", "test@test", can_get_my_acc_detail))
+  EXPECT_CALL(
+      *wsv_query,
+      hasAccountGrantablePermission(
+          "admin@test", "test@test", iroha::model::can_get_my_acc_detail))
       .WillOnce(Return(false));
 
   auto query = QueryBuilder()
